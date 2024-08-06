@@ -7,7 +7,7 @@ module.exports = {
         uri: "torch.js",
         params: {
           venv: "env",                // Edit this to customize the venv folder path
-          // xformers: true   // uncomment this line if your project requires xformers
+          xformers: true   // uncomment this line if your project requires xformers
         }
       }
     },

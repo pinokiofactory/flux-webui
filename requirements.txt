@@ -1,8 +1,8 @@
 gradio
 devicetorch
 accelerate
-git+https://github.com/huggingface/diffusers.git@flux-pipeline
-torch
+git+https://github.com/peanutcocktail/diffusers.git
 transformers==4.42.4
-xformers
 sentencepiece
+protobuf
+einops

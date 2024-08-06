@@ -1,8 +1,8 @@
 const path = require('path')
 module.exports = {
   version: "2.0",
-  title: "flux-all",
-  description: "",
+  title: "flux-webui",
+  description: "Minimal Flux Web UI powered by Gradio & Diffusers",
   icon: "icon.webp",
   menu: async (kernel, info) => {
     let installed = info.exists("env")
