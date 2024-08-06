@@ -1,5 +1,8 @@
-transformers
-accelerate
-diffusers
 gradio
 devicetorch
+accelerate
+git+https://github.com/huggingface/diffusers.git@flux-pipeline
+torch
+transformers==4.42.4
+xformers
+sentencepiece
