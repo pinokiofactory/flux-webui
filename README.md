@@ -1,6 +1,6 @@
 # Flux WebUI
 
-Minimal Flux Web UI powered by Gradio & Diffusers.
+Minimal Flux Web UI powered by Gradio & Diffusers. Automatically downloads checkpoints from Huggingface so everything "just works".
 
 Supports:
 
@@ -35,6 +35,12 @@ pip install -r requirements.txt
 
 # Run
 
+Run the command to start the gradio UI:
+
 ```
 python app.py
 ```
+
+When you first run it, it will need to download the checkpoint files from Huggingface, so the first run will be slow. Keep an eye on the terminal to check the progress.
+
+But from the second run it will be faster.
