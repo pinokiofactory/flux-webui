@@ -2,6 +2,11 @@
 
 Minimal Flux Web UI powered by Gradio & Diffusers.
 
+Supports:
+
+- [FLUX.1-schnell](https://huggingface.co/black-forest-labs/FLUX.1-schnell): A fast model with 4 step inference.
+- [FLUX.1-merged](https://huggingface.co/sayakpaul/FLUX.1-merged): Flux.1-dev with just 8 steps!
+
 ![ui.png](ui.png)
 
 # Install
