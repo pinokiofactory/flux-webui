@@ -2,7 +2,7 @@ const path = require('path')
 module.exports = {
   version: "2.0",
   title: "flux-webui",
-  description: "Minimal Flux Web UI powered by Gradio & Diffusers",
+  description: "Minimal Flux Web UI powered by Gradio & Diffusers (Flux Schnell + Flux Merged)",
   icon: "icon.png",
   menu: async (kernel, info) => {
     let installed = info.exists("env")
