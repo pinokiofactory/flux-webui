@@ -72,46 +72,45 @@ with gr.Blocks(css=css) as demo:
             )
             run_button = gr.Button("Run", scale=0)
         result = gr.Image(label="Result", show_label=False)
-        with gr.Accordion("Advanced Settings"):
-            checkpoint = gr.Dropdown(
-              value= "black-forest-labs/FLUX.1-schnell",
-              choices=[
-                "black-forest-labs/FLUX.1-schnell",
-                "sayakpaul/FLUX.1-merged"
-              ]
+        checkpoint = gr.Dropdown(
+          value= "black-forest-labs/FLUX.1-schnell",
+          choices=[
+            "black-forest-labs/FLUX.1-schnell",
+            "sayakpaul/FLUX.1-merged"
+          ]
+        )
+        seed = gr.Slider(
+            label="Seed",
+            minimum=0,
+            maximum=MAX_SEED,
+            step=1,
+            value=0,
+        )
+        randomize_seed = gr.Checkbox(label="Randomize seed", value=True)
+        with gr.Row():
+            width = gr.Slider(
+                label="Width",
+                minimum=256,
+                maximum=MAX_IMAGE_SIZE,
+                step=32,
+                value=1024,
             )
-            seed = gr.Slider(
-                label="Seed",
-                minimum=0,
-                maximum=MAX_SEED,
+            height = gr.Slider(
+                label="Height",
+                minimum=256,
+                maximum=MAX_IMAGE_SIZE,
+                step=32,
+                value=576,
+            )
+        with gr.Row():
+            num_inference_steps = gr.Slider(
+                label="Number of inference steps",
+                minimum=1,
+                maximum=50,
                 step=1,
-                value=0,
+                value=4,
             )
-            randomize_seed = gr.Checkbox(label="Randomize seed", value=True)
-            with gr.Row():
-                width = gr.Slider(
-                    label="Width",
-                    minimum=256,
-                    maximum=MAX_IMAGE_SIZE,
-                    step=32,
-                    value=1024,
-                )
-                height = gr.Slider(
-                    label="Height",
-                    minimum=256,
-                    maximum=MAX_IMAGE_SIZE,
-                    step=32,
-                    value=576,
-                )
-            with gr.Row():
-                num_inference_steps = gr.Slider(
-                    label="Number of inference steps",
-                    minimum=1,
-                    maximum=50,
-                    step=1,
-                    value=4,
-                )
-            checkpoint.change(fn=update_slider, inputs=[checkpoint], outputs=[num_inference_steps])
+        checkpoint.change(fn=update_slider, inputs=[checkpoint], outputs=[num_inference_steps])
     gr.on(
         triggers=[run_button.click, prompt.submit],
         fn = infer,
