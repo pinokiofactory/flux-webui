@@ -2,6 +2,8 @@
 
 Minimal Flux Web UI powered by Gradio & Diffusers.
 
+![ui.png](ui.png)
+
 # Install
 
 ## 1. One click install
