@@ -3,7 +3,7 @@ module.exports = {
   version: "2.0",
   title: "flux-webui",
   description: "Minimal Flux Web UI powered by Gradio & Diffusers",
-  icon: "icon.webp",
+  icon: "icon.png",
   menu: async (kernel, info) => {
     let installed = info.exists("env")
     let running = {
