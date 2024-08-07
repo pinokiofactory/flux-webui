@@ -18,7 +18,7 @@ nav {
   display: inline;
 }
 """
-def infer(prompt, checkpoint="black-forest-labs/FLUX.1-schnell", seed=42, randomize_seed=False, width=1024, height=1024, num_inference_steps=4, progress=gr.Progress(track_tqdm=True)):
+def infer(prompt, checkpoint="black-forest-labs/FLUX.1-schnell", seed=42, num_images_per_prompt=1, randomize_seed=False, width=1024, height=1024, num_inference_steps=4, progress=gr.Progress(track_tqdm=True)):
     global pipe
     global selected
     # if the new checkpoint is different from the selected one, re-instantiate the pipe
@@ -44,16 +44,17 @@ def infer(prompt, checkpoint="black-forest-labs/FLUX.1-schnell", seed=42, random
     if randomize_seed:
         seed = random.randint(0, MAX_SEED)
     generator = torch.Generator().manual_seed(seed)
-    image = pipe(
+    images = pipe(
             prompt = prompt, 
             width = width,
             height = height,
             num_inference_steps = num_inference_steps, 
             generator = generator,
+            num_images_per_prompt = num_images_per_prompt,
             guidance_scale=0.0
-    ).images[0] 
+    ).images
     devicetorch.empty_cache(torch)
-    return image, seed
+    return images, seed
 def update_slider(checkpoint, num_inference_steps):
     if checkpoint == "sayakpaul/FLUX.1-merged":
         return 8
@@ -71,7 +72,7 @@ with gr.Blocks(css=css) as demo:
                 container=False,
             )
             run_button = gr.Button("Run", scale=0)
-        result = gr.Image(label="Result", show_label=False)
+        result = gr.Gallery(label="Result", show_label=False)
         checkpoint = gr.Dropdown(
           value= "black-forest-labs/FLUX.1-schnell",
           choices=[
@@ -103,6 +104,13 @@ with gr.Blocks(css=css) as demo:
                 value=576,
             )
         with gr.Row():
+            num_images_per_prompt = gr.Slider(
+                label="Number of images",
+                minimum=1,
+                maximum=50,
+                step=1,
+                value=1,
+            )
             num_inference_steps = gr.Slider(
                 label="Number of inference steps",
                 minimum=1,
@@ -114,7 +122,7 @@ with gr.Blocks(css=css) as demo:
     gr.on(
         triggers=[run_button.click, prompt.submit],
         fn = infer,
-        inputs = [prompt, checkpoint, seed, randomize_seed, width, height, num_inference_steps],
+        inputs = [prompt, checkpoint, seed, num_images_per_prompt, randomize_seed, width, height, num_inference_steps],
         outputs = [result, seed]
     )
 demo.launch()
