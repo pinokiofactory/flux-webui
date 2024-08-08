@@ -1,8 +1,13 @@
 gradio
 devicetorch
-accelerate
-git+https://github.com/peanutcocktail/diffusers.git
+git+https://github.com/huggingface/accelerate.git@test-clear-memory-cpu-offload
+git+https://github.com/huggingface/diffusers.git
 transformers==4.42.4
 sentencepiece
 protobuf
 einops
+git+https://github.com/huggingface/optimum-quanto.git@feat-hub-support
+
+#git+https://github.com/peanutcocktail/optimum-quanto.git@feat-hub-support
+#accelerate
+#git+https://github.com/peanutcocktail/diffusers.git
