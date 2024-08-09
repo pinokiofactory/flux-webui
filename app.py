@@ -97,7 +97,7 @@ with gr.Blocks(css=css) as demo:
                 container=False,
             )
             run_button = gr.Button("Run", scale=0)
-        result = gr.Gallery(label="Result", show_label=False, object_fit="contain")
+        result = gr.Gallery(label="Result", show_label=False, object_fit="contain", format="png")
         checkpoint = gr.Dropdown(
           label="Model",
           value= "black-forest-labs/FLUX.1-schnell",
