@@ -59,8 +59,8 @@ def infer(prompt, checkpoint="black-forest-labs/FLUX.1-schnell", seed=42, guidan
 
         if device == "cuda":
             print(f"enable model cpu offload...")
-            pipe.enable_model_cpu_offload()
-            #pipe.enable_sequential_cpu_offload()
+            #pipe.enable_model_cpu_offload()
+            pipe.enable_sequential_cpu_offload()
             print(f"done!")
         selected = checkpoint
     if randomize_seed:
