@@ -6,8 +6,9 @@ transformers==4.42.4
 sentencepiece
 protobuf
 einops
-git+https://github.com/huggingface/optimum-quanto.git@feat-hub-support
+git+https://github.com/huggingface/optimum-quanto.git
 
+#git+https://github.com/huggingface/optimum-quanto.git@feat-hub-support
 #git+https://github.com/peanutcocktail/optimum-quanto.git@feat-hub-support
 #accelerate
 #git+https://github.com/peanutcocktail/diffusers.git
