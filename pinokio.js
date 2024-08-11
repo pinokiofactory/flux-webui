@@ -73,6 +73,10 @@ module.exports = {
           icon: "fa-regular fa-circle-xmark",
           text: "Reset",
           href: "reset.js",
+		}, {
+          icon: "fa-regular fa-circle-xmark",
+          text: "Empty cache",
+          href: "clearcache.js",
         }]
       }
     } else {

@@ -8,6 +8,8 @@ from optimum.quanto import QuantizedDiffusersModel, QuantizedTransformersModel
 import json
 import devicetorch
 import os
+from datetime import datetime
+from PIL import Image
 class QuantizedFluxTransformer2DModel(QuantizedDiffusersModel):
     base_class = FluxTransformer2DModel
 dtype = torch.bfloat16
@@ -16,6 +18,7 @@ device = devicetorch.get(torch)
 MAX_SEED = np.iinfo(np.int32).max
 MAX_IMAGE_SIZE = 2048
 selected = None
+
 css="""
 nav {
   text-align: center;
@@ -25,6 +28,22 @@ nav {
   display: inline;
 }
 """
+#save all generated images into an output folder with unique name
+def save_images(images):  
+    output_folder = "output" 
+    os.makedirs(output_folder, exist_ok=True)
+    saved_paths = []
+    
+    for i, img in enumerate(images):
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"flux_{timestamp}_{i}.png"
+        filepath = os.path.join(output_folder, filename)
+        img.save(filepath)
+        saved_paths.append(filepath)
+    
+    return saved_paths
+    
+        
 def infer(prompt, checkpoint="black-forest-labs/FLUX.1-schnell", seed=42, guidance_scale=0.0, num_images_per_prompt=1, randomize_seed=False, width=1024, height=1024, num_inference_steps=4, progress=gr.Progress(track_tqdm=True)):
     global pipe
     global selected
@@ -79,12 +98,16 @@ def infer(prompt, checkpoint="black-forest-labs/FLUX.1-schnell", seed=42, guidan
     print(f"Inference finished!")
     devicetorch.empty_cache(torch)
     print(f"emptied cache")
-    return images, seed
+    saved_paths = save_images(images) #save the images into the output folder
+    return images, seed, saved_paths    
+    
 def update_slider(checkpoint, num_inference_steps):
     if checkpoint == "sayakpaul/FLUX.1-merged":
         return 8
     else:
         return 4
+        
+        
 with gr.Blocks(css=css) as demo:
     with gr.Column(elem_id="col-container"):
         gr.HTML("<nav><img id='logo' src='file/icon.png'/></nav>")
@@ -92,63 +115,68 @@ with gr.Blocks(css=css) as demo:
             prompt = gr.Text(
                 label="Prompt",
                 show_label=False,
-                max_lines=1,
+                max_lines=3,
                 placeholder="Enter your prompt",
                 container=False,
             )
             run_button = gr.Button("Run", scale=0)
         result = gr.Gallery(label="Result", show_label=False, object_fit="contain", format="png")
-        checkpoint = gr.Dropdown(
-          label="Model",
-          value= "black-forest-labs/FLUX.1-schnell",
-          choices=[
-            "black-forest-labs/FLUX.1-schnell",
-            "sayakpaul/FLUX.1-merged"
-          ]
-        )
-        seed = gr.Slider(
-            label="Seed",
-            minimum=0,
-            maximum=MAX_SEED,
-            step=1,
-            value=0,
-        )
-        randomize_seed = gr.Checkbox(label="Randomize seed", value=True)
+
         with gr.Row():
-            width = gr.Slider(
-                label="Width",
-                minimum=256,
-                maximum=MAX_IMAGE_SIZE,
-                step=32,
-                value=1024,
-            )
-            height = gr.Slider(
-                label="Height",
-                minimum=256,
-                maximum=MAX_IMAGE_SIZE,
-                step=32,
-                value=576,
-            )
-        with gr.Row():
-            num_images_per_prompt = gr.Slider(
-                label="Number of images",
-                minimum=1,
-                maximum=50,
-                step=1,
-                value=1,
-            )
-            num_inference_steps = gr.Slider(
-                label="Number of inference steps",
-                minimum=1,
-                maximum=50,
-                step=1,
-                value=4,
-            )
-            guidance_scale = gr.Number(
-                label="Guidance Scale",
+ 
+            with gr.Column():
+                height = gr.Slider(
+                    label="Height",
+                    minimum=256,
+                    maximum=MAX_IMAGE_SIZE,
+                    step=32,
+                    value=576,
+                )
+                width = gr.Slider(
+                    label="Width",
+                    minimum=256,
+                    maximum=MAX_IMAGE_SIZE,
+                    step=32,
+                    value=576,
+                )
+                num_images_per_prompt = gr.Slider(
+                    label="Number of images",
+                    minimum=1,
+                    maximum=50,
+                    step=1,
+                    value=1,
+                )
+            with gr.Column():
+                seed = gr.Slider(
+                label="Seed",
                 minimum=0,
-                maximum=50,
-                value=0.0,
+                maximum=MAX_SEED,
+                step=1,
+                value=0,
+                )
+                randomize_seed = gr.Checkbox(label="Randomize seed", value=True)
+                checkpoint = gr.Dropdown(
+                label="Model",
+                value= "black-forest-labs/FLUX.1-schnell",
+                choices=[
+                    "black-forest-labs/FLUX.1-schnell",
+                    "sayakpaul/FLUX.1-merged"
+                 ]
+                )
+            with gr.Column():
+                num_inference_steps = gr.Slider(
+                    label="Number of inference steps",
+                    minimum=1,
+                    maximum=50,
+                    step=1,
+                    value=4,
+                )
+                guidance_scale = gr.Number(
+                    label="Guidance Scale",
+                    minimum=0,
+                    maximum=50,
+                    step=0.5,
+                    value=1,
             )
         checkpoint.change(fn=update_slider, inputs=[checkpoint], outputs=[num_inference_steps])
     gr.on(
