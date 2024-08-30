@@ -129,54 +129,101 @@ def save_images_with_prompt(
         json.dump(params, f, indent=4)
     
     return save_images(images,timestamp)
+
+def infer_casdao(
+    prompt, 
+    checkpoint="../fshare/models/sayakpaul/FLUX.1-merged", 
+    seed=42, 
+    guidance_scale=0.0, 
+    num_images_per_prompt=1, 
+    randomize_seed=False, 
+    width=1024, height=1024, 
+    num_inference_steps=4, 
+    whether_save_prompt=False,
+    progress=gr.Progress(track_tqdm=True),
+    ):
     
-def infer(prompt, checkpoint="black-forest-labs/FLUX.1-schnell", seed=42, guidance_scale=0.0, num_images_per_prompt=1, randomize_seed=False, width=1024, height=1024, num_inference_steps=4, whether_save_prompt=False, progress=gr.Progress(track_tqdm=True)):
     global pipe
     global selected
     # if the new checkpoint is different from the selected one, re-instantiate the pipe
     
     torch.cuda.reset_peak_memory_stats()
     
-    if selected != checkpoint:
-        if checkpoint == "sayakpaul/FLUX.1-merged":
-            bfl_repo = "cocktailpeanut/xulf-d"
-            if device == "mps":
-                transformer = QuantizedFluxTransformer2DModel.from_pretrained("cocktailpeanut/flux1-merged-qint8")
-            else:
-                print("initializing quantized transformer...")
-                transformer = QuantizedFluxTransformer2DModel.from_pretrained("cocktailpeanut/flux1-merged-q8")
-                print("initialized!")
+    if selected!=checkpoint:
+        torch.cuda.empty_cache()
+            
+        if checkpoint == "../fshare/models/sayakpaul/FLUX.1-merged":
+            bfl_repo = "../fshare/models/cocktailpeanut/xulf-d"
+            # print("initializing quantized transformer...")
+            print("初始化量化的 transformer 中...")
+            transformer = QuantizedFluxTransformer2DModel.from_pretrained("../fshare/models/cocktailpeanut/flux1-merged-q8")
+            # print("initialized!")
+            print("初始化完成！")
+            
+            # print(f"moving device to {device}")
+            print(f"将 Transformer 模型移到 {device} 设备中。")
+            transformer.to(device=device, dtype=dtype)
+        
+            # print(f"initializing pipeline...")
+            print(f"初始化 Flux 管线中...")
+            pipe = FluxPipeline.from_pretrained(bfl_repo, transformer=None, torch_dtype=dtype)
+            # print("initialized!")
+            print("初始化完成")
+            pipe.transformer = transformer
+        
+            if device == "cuda":
+                # print(f"enable model cpu offload...")
+                print(f"启用CPU加载模型降低负载...")
+                #pipe.enable_model_cpu_offload()
+                pipe.enable_sequential_cpu_offload()
+                # print(f"done!")
+                print(f"启用完成！")
+            
+            pipe.enable_attention_slicing()
+            pipe.vae.enable_slicing()
+            pipe.vae.enable_tiling()  
+            pipe.to(torch.bfloat16)
+        
         else:
-            bfl_repo = "cocktailpeanut/xulf-s"
-            if device == "mps":
-                transformer = QuantizedFluxTransformer2DModel.from_pretrained("cocktailpeanut/flux1-schnell-qint8")
-            else:
-                print("initializing quantized transformer...")
-                transformer = QuantizedFluxTransformer2DModel.from_pretrained("cocktailpeanut/flux1-schnell-q8")
-                print("initialized!")
-        print(f"moving device to {device}")
-        transformer.to(device=device, dtype=dtype)
-        print(f"initializing pipeline...")
-        pipe = FluxPipeline.from_pretrained(bfl_repo, transformer=None, torch_dtype=dtype)
-        print("initialized!")
-        pipe.transformer = transformer
-        pipe.to(device)
-        pipe.enable_attention_slicing()
-        pipe.vae.enable_slicing()
-        pipe.vae.enable_tiling()
-
-        if device == "cuda":
-            print(f"enable model cpu offload...")
-            #pipe.enable_model_cpu_offload()
-            pipe.enable_sequential_cpu_offload()
-            print(f"done!")
+            if checkpoint == "../fshare/models/black-forest-labs/FLUX.1-schnell":
+                bfl_repo = checkpoint
+                # print("initializing quantized transformer...")
+                print("初始化量化的 transformer 中...")
+                transformer = FluxTransformer2DModel.from_pretrained("../fshare/models/cocktailpeanut/xulf-s/transformer",torch_dtype=dtype)    
+                quantize(transformer, weights=qfloat8)
+                freeze(transformer)
+                # print("initialized!")
+                print("初始化完成！")
+            elif checkpoint == "../fshare/models/black-forest-labs/FLUX.1-dev":
+                bfl_repo = checkpoint
+                # print("initializing quantized transformer...")
+                print("初始化量化的 transformer 中...")
+                transformer = FluxTransformer2DModel.from_pretrained("../fshare/models/cocktailpeanut/xulf-d/transformer",torch_dtype=dtype)    
+                quantize(transformer, weights=qfloat8)
+                freeze(transformer)
+                # print("initialized!")
+                print("初始化完成！")
+            
+            text_encoder_2 = T5EncoderModel.from_pretrained(bfl_repo, subfolder="text_encoder_2", torch_dtype=dtype)
+            quantize(text_encoder_2, weights=qfloat8)
+            freeze(text_encoder_2)
+            
+            pipe = FluxPipeline.from_pretrained(bfl_repo, transformer=None, text_encoder_2=None, torch_dtype=dtype)
+            pipe.transformer = transformer
+            pipe.text_encoder_2 = text_encoder_2
+            
+            pipe.enable_model_cpu_offload()
+        
         selected = checkpoint
+        
     if randomize_seed:
         seed = random.randint(0, MAX_SEED)
     generator = torch.Generator().manual_seed(seed)
-    print(f"Started the inference. Wait...")
-    
-    start_time = time.time() # Record the start time of inference
+        
+    # print(f"Started the inference. Wait...")
+    print(f"已开始推理。请稍等...")
+    # 记录推理前的时间
+    start_time = time.time()
     images = pipe(
             prompt = prompt,
             width = width,
@@ -186,19 +233,22 @@ def infer(prompt, checkpoint="black-forest-labs/FLUX.1-schnell", seed=42, guidan
             num_images_per_prompt = num_images_per_prompt,
             guidance_scale=guidance_scale
     ).images
-    # Record time and peak memory usage within inference
+        
+    # 计算用时和峰值显存占用
     elapsed_time = time.time() - start_time
     max_vram_usage = torch.cuda.max_memory_allocated() / 1024 / 1024
-    
+        
     timestamp_after_generation = str(datetime.now().strftime("%Y%m%d_%H%M%S"))
-    
-    print(f"Inference finished!")
-    print("Inference took: ", elapsed_time, "s")
-    print("Peak vram used: ", max_vram_usage, "MB")
-    
+        
+    # print(f"Inference finished!")
+    print(f"推理已完成！")
+    print("生成所耗费的时间：", elapsed_time, "s")
+    print("峰值显存占用：", max_vram_usage, "MB")
+        
     devicetorch.empty_cache(torch)
-    print(f"emptied cache")
-    
+    # print(f"emptied cache.")
+    print(f"已清理缓存。")
+        
     saved_paths=None
     if whether_save_prompt:
         saved_paths=save_images_with_prompt(
@@ -215,7 +265,7 @@ def infer(prompt, checkpoint="black-forest-labs/FLUX.1-schnell", seed=42, guidan
         )
     else:
         saved_paths=save_images(images,timestamp_after_generation)
-    
+        
     return images, seed, saved_paths
     
 def update_slider(checkpoint, num_inference_steps):
@@ -256,10 +306,11 @@ with gr.Blocks(css=css, title="Flux-WebUI") as demo:
         with gr.Row():
             checkpoint = gr.Dropdown(
                 label="模型（Model）",
-                value= "black-forest-labs/FLUX.1-schnell",
+                value= "../fshare/models/black-forest-labs/FLUX.1-dev",
                 choices=[
-                    "black-forest-labs/FLUX.1-schnell",
-                    "sayakpaul/FLUX.1-merged"
+                    "../fshare/models/black-forest-labs/FLUX.1-dev"
+                    "../fshare/models/black-forest-labs/FLUX.1-schnell",
+                    "../fshare/models/sayakpaul/FLUX.1-merged",
                 ],
                 scale=8
             )
@@ -329,7 +380,7 @@ with gr.Blocks(css=css, title="Flux-WebUI") as demo:
         checkpoint.change(fn=update_slider, inputs=[checkpoint, num_inference_steps], outputs=[num_inference_steps])
     gr.on(
         triggers=[run_button.click, prompt.submit],
-        fn = infer,
+        fn = infer_casdao,
         inputs = [prompt, checkpoint, seed, guidance_scale, num_images_per_prompt, randomize_seed, width, height, num_inference_steps,store_prompt],
         outputs = [result, seed]
     )
